@@ -1,5 +1,33 @@
 #!/bin/bash
 
+###
+# Copyright (c) 2018-2019 Kai Doernemann (kai_AT_doernemann.net)
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice,
+#    this list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution.
+#
+# 3. The name of the author may not be used to endorse or promote products
+#    derived from this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY KAI DOERNEMANN "AS IS" AND ANY EXPRESS OR IMPLIED
+# WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+# MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+# IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+# SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+# PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+# OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+# OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+# ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+###
+
 CONFIGS="/etc/easybackup"
 HOSTIDENTIFIER="$CONFIGS/secret_identifier"
 
@@ -7,11 +35,20 @@ function usage () {
 	echo -n "easybackup [command] [options]
 
 commands:
+	auto
+		Default action. Scan filesystems for easybackup
+		signatures and start backup accordingly
+
 	init <device|mountpoint> [<paths-to-backup> ... ]
 		Init a device/path as a target for easybackup.
 		List of paths is optional, /etc and /home are used
 		as default.
 		List of backup-devices is kept under /etc/easybackup.
+		Attributes of backup-devices are signed with a secret
+		and verified before backup starts. By this, only a 100%
+		cloned USB harddrive (with same serial, filesys etc.)
+		will trigger the start of a backup.
+		Backup to encrypted partitions is a good idea, anyhow.
 
 	backup <device|mountpoint>
 		Scan for new devices and check if backup should be started.
@@ -25,6 +62,8 @@ commands:
 	wipe <device|mountpoint>
 		Wipe 'easybackup' directory on disk an remove it from
 		configuration directory $CONFIGS
+
+This usage() is quiet shitty.
 " >&2
 	exit 2
 }
@@ -244,14 +283,23 @@ function backup () {
 	sudo touch $MOUNTPOINT/easybackup/easybackup_stop
 }
 
-
+function auto () {
+	mount | grep ^/ | while read dev on mp type fstype; do
+		if [ -d "$mp/easybackup" ]; then
+			(backup $dev)
+		fi
+	done
+}
 
 ###
 ### MAIN
 ###
 
-cmd="$1"; shift
+cmd="${1:-auto}"; shift
 case "$cmd" in
+	auto)
+		"$cmd"
+		;;
 	init|backup|stamp|signature|wipe)
 		"$cmd" "$@"
 		;;
@@ -260,57 +308,3 @@ case "$cmd" in
 		;;
 esac
 exit 0
-
-#################################################
-
-# use this for testing and to see defined variables:
-# $ udevadm test -a add /class/block/sdb1
-...
-preserve already existing symlink '/dev/disk/by-uuid/2018-04-25-06-09-17-00' to '../../sdb1'
-.ID_FS_TYPE_NEW=iso9660
-.MM_USBIFNUM=00
-ACTION=add
-DEVLINKS=/dev/disk/by-path/pci-0000:00:14.0-usb-0:1:1.0-scsi-0:0:0:0-part1 /dev/disk/by-label/Fedora-S-dvd-x86_64-28 /dev/disk/by-uuid/2018-04-25-06-09-17-00 /dev/disk/by-id/usb-SanDisk_Cruzer_Switch_4C532005770307121182-0:0-part1
-DEVNAME=/dev/sdb1
-DEVPATH=/devices/pci0000:00/0000:00:14.0/usb1/1-1/1-1:1.0/host3/target3:0:0/3:0:0:0/block/sdb/sdb1
-DEVTYPE=partition
-ID_BUS=usb
-ID_DRIVE_THUMB=1
-ID_FS_APPLICATION_ID=GENISOIMAGE\x20ISO\x209660\x2fHFS\x20FILESYSTEM\x20CREATOR\x20\x28C\x29\x201993\x20E.YOUNGDALE\x20\x28C\x29\x201997-2006\x20J.PEARSON\x2fJ.SCHILLING\x20\x28C\x29\x202006-2007\x20CDRKIT\x20TEAM
-ID_FS_BOOT_SYSTEM_ID=EL\x20TORITO\x20SPECIFICATION
-ID_FS_LABEL=Fedora-S-dvd-x86_64-28
-ID_FS_LABEL_ENC=Fedora-S-dvd-x86_64-28
-ID_FS_SYSTEM_ID=LINUX
-ID_FS_TYPE=iso9660
-ID_FS_USAGE=filesystem
-ID_FS_UUID=2018-04-25-06-09-17-00
-ID_FS_UUID_ENC=2018-04-25-06-09-17-00
-ID_FS_VERSION=Joliet Extension
-ID_INSTANCE=0:0
-ID_MODEL=Cruzer_Switch
-ID_MODEL_ENC=Cruzer\x20Switch\x20\x20\x20
-ID_MODEL_ID=5572
-ID_PART_TABLE_TYPE=dos
-ID_PART_TABLE_UUID=537f877e
-ID_PATH=pci-0000:00:14.0-usb-0:1:1.0-scsi-0:0:0:0
-ID_PATH_TAG=pci-0000_00_14_0-usb-0_1_1_0-scsi-0_0_0_0
-ID_REVISION=1.26
-ID_SERIAL=SanDisk_Cruzer_Switch_4C532005770307121182-0:0
-ID_SERIAL_SHORT=4C532005770307121182
-ID_TYPE=disk
-ID_USB_DRIVER=usb-storage
-ID_USB_INTERFACES=:080650:
-ID_USB_INTERFACE_NUM=00
-ID_VENDOR=SanDisk
-ID_VENDOR_ENC=SanDisk\x20
-ID_VENDOR_ID=0781
-MAJOR=8
-MINOR=17
-PARTN=1
-SUBSYSTEM=block
-TAGS=:systemd:
-USEC_INITIALIZED=379917051423
-run: '/home/kai/p/easybackup/easybackup.bash /devices/pci0000:00/0000:00:14.0/usb1/1-1/1-1:1.0/host3/target3:0:0/3:0:0:0/block/sdb/sdb1'
-Unload module index
-Unloaded link configuration context.
-

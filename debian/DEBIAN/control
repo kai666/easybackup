@@ -1,0 +1,11 @@
+Package: easybackup
+Version: 0.1
+Source: easybackup
+Maintainer: Kai Doernemann <kai@doernemann.net>
+Section: misc
+Priority: optional
+Architecture: all
+Depends: bash (>= 3.0.0), coreutils, rsync, sudo
+Description: start configurable backup if usb-disk is plugged in
+ goal is to make usage so easy, that even my parents can make
+ a backup from time to time

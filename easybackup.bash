@@ -140,20 +140,20 @@ PATHS="$paths"
 EOF
 }
 
-# pmf == partition, mountpoint, fstype
+# pmf == PARTITION, MOUNTPOINT, FSTYPE
 function pmf () {
 	local dev="$1"
 
 	set -- `mount | grep $dev | grep ^/ | head -1`
-	partition="${1##*/}"				# /dev/dm-3 -> dm-3
-	mountpoint="$3"
-	fstype="$5"
-	export partition mp fstype
+	PARTITION="${1##*/}"				# /dev/dm-3 -> dm-3
+	MOUNTPOINT="$3"
+	FSTYPE="$5"
+	export PARTITION MOUNTPOINT FSTYPE
 
-	[ -z "$partition" ]	&& errx 1 "cannot find partition for $dev"
-	[ -z "$fstype" ]	&& errx 1 "cannot find fstype for $dev"
-	[ -z "$mountpoint" ]	&& errx 1 "cannot find mountpoint for $dev"
-	[ "$mountpoint" = "/" ]	&& errx 1 "refusing mountpoint '/' for $dev"
+	[ -z "$PARTITION" ]	&& errx 1 "cannot find partition for $dev"
+	[ -z "$FSTYPE" ]	&& errx 1 "cannot find fstype for $dev"
+	[ -z "$MOUNTPOINT" ]	&& errx 1 "cannot find mountpoint for $dev"
+	[ "$MOUNTPOINT" = "/" ]	&& errx 1 "refusing mountpoint '/' for $dev"
 }
 
 #### functions called from main()
@@ -163,7 +163,7 @@ function stamp () {
 	local paths="$@"
 
 	pmf "$dev"
-	calculate_signature "$partition" "$paths"
+	calculate_signature "$PARTITION" "$paths"
 	echo "$STAMP"
 }
 
@@ -171,7 +171,7 @@ function signature () {
 	local dev="$1"
 
 	pmf "$dev"
-	calculate_signature "$partition"
+	calculate_signature "$PARTITION"
 	echo "$MD5SIGNATURE"
 }
 
@@ -179,13 +179,13 @@ function wipe () {
 	local dev="$1"
 
 	pmf "$dev"
-	calculate_signature "$partition"
+	calculate_signature "$PARTITION"
 
 	if [ -e "$CONFIGS/$MD5SIGNATURE" ]; then
 		sudo /bin/rm "$CONFIGS/$MD5SIGNATURE"
 	fi
-	if [ -e "$mountpoint/easybackup" ]; then
-		sudo /bin/rm -rf "$mountpoint/easybackup"
+	if [ -e "$MOUNTPOINT/easybackup" ]; then
+		sudo /bin/rm -rf "$MOUNTPOINT/easybackup"
 	fi
 }
 
@@ -195,36 +195,36 @@ function init () {
 
 	pmf "$dev"
 
-	[ -e "$mountpoint/easybackup/.easybackup" ] &&
-		errx 1 "partition=$partition mp=$mountpoint already initialized." \
+	[ -e "$MOUNTPOINT/easybackup/.easybackup" ] &&
+		errx 1 "partition=$PARTITION mp=$MOUNTPOINT already initialized." \
 		"Use 'wipe' to clear."
-	[ -e "$mountpoint/easybackup" ] &&
-		errx 1 "partition=$partition mp=$mountpoint initialized?" \
+	[ -e "$MOUNTPOINT/easybackup" ] &&
+		errx 1 "partition=$PARTITION mp=$MOUNTPOINT initialized?" \
 		"Use 'wipe' to clear."
 
-	case "$fstype" in
+	case "$FSTYPE" in
 	ext2|ext3|ext4)
 		;;
 	*)
-		errx 1 "refusing to use filesystem of type '$fstype' for backup"
+		errx 1 "refusing to use filesystem of type '$FSTYPE' for backup"
 		;;
 	esac
 
-	sudo install -d -o root -g root -m 0755 "$mountpoint/easybackup"
+	sudo install -d -o root -g root -m 0755 "$MOUNTPOINT/easybackup"
 
-	calculate_signature $partition $paths
+	calculate_signature $PARTITION $paths
 	# exports MD5SIGNATURE and STAMP
 
 	echo -e "$STAMP" | myinstall "$CONFIGS/$MD5SIGNATURE"
 	# keep a copy on the usb-disk ...
-	echo -e "$STAMP" | myinstall "$mountpoint/easybackup/$MD5SIGNATURE"
+	echo -e "$STAMP" | myinstall "$MOUNTPOINT/easybackup/$MD5SIGNATURE"
 }
 
 function backup () {
 	local dev="$1"
 
 	pmf "$dev"
-	calculate_signature $partition
+	calculate_signature $PARTITION
 
 	if [ ! -e "$CONFIGS/$MD5SIGNATURE" ]; then
 		errx 0 "config $CONFIGS/$MD5SIGNATURE not found - use easybackup init"
@@ -236,13 +236,15 @@ function backup () {
 		errx 1 "signature $SIGNATURE doesn't match $MD5SIGNATURE"
 	
 	echo "backup to ID_FS_UUID=$ID_FS_UUID LABEL=$LABEL starting ..."
-	sudo touch $mountpoint/easybackup/easybackup_start
+	sudo touch $MOUNTPOINT/easybackup/easybackup_start
 	for p in $PATHS; do
-		echo "$p -> $mountpoint/easybackup/"
-		sudo rsync -au $p $mountpoint/easybackup/
+		echo "$p -> $MOUNTPOINT/easybackup/"
+		sudo rsync -au $p $MOUNTPOINT/easybackup/
 	done
-	sudo touch $mountpoint/easybackup/easybackup_stop
+	sudo touch $MOUNTPOINT/easybackup/easybackup_stop
 }
+
+
 
 ###
 ### MAIN

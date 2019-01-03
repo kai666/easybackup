@@ -1,7 +1,7 @@
 BASHS=		$(wildcard *.bash)
 SRC=		${BASHS}
 SYNTAX=		$(addsuffix .syntax, ${SRC})
-SYNTAX+=	easybackup.postinst.syntax
+SYNTAX+=	easybackup.postinst.syntax easybackup.postrm.syntax
 
 PACKAGE=	easybackup-0.1
 DEB=		${PACKAGE}.deb

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-service="easybackup"
+service="easybackup.service"
 
 do_remove () {
 	deb-systemd-helper purge "$service" >/dev/null || true

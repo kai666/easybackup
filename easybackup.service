@@ -1,0 +1,11 @@
+[Unit]
+Description=Easybackup for USB-Disks
+Documentation=man:easybackup(8)
+
+[Service]
+ExecStart=/usr/bin/easybackupd
+Type=simple
+
+[Install]
+WantedBy=multi-user.target
+

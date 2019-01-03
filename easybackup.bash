@@ -74,6 +74,13 @@ function errx () {
 	exit $_ex
 }
 
+# create absolute pathname from relative pn
+function absolute () {
+	local _x="$1"
+	[ -n "${_x##/*}" ] && _x="${PWD}/$_x"
+	echo "${_x}"
+}
+
 # copy stdin to a specific file w/ mode
 function myinstall () {
 	local fn="$1"
@@ -183,6 +190,9 @@ EOF
 function pmf () {
 	local dev="$1"
 
+	dev=${dev%%/}		# cut trailing '/'
+	dev="`absolute "$dev"`"
+
 	set -- `mount | grep $dev | grep ^/ | head -1`
 	PARTITION="${1##*/}"				# /dev/dm-3 -> dm-3
 	MOUNTPOINT="$3"
@@ -220,12 +230,16 @@ function wipe () {
 	pmf "$dev"
 	calculate_signature "$PARTITION"
 
+	done=""
 	if [ -e "$CONFIGS/$MD5SIGNATURE" ]; then
 		sudo /bin/rm "$CONFIGS/$MD5SIGNATURE"
+		done="${done}y"
 	fi
 	if [ -e "$MOUNTPOINT/easybackup" ]; then
 		sudo /bin/rm -rf "$MOUNTPOINT/easybackup"
+		done="${done}y"
 	fi
+	[ -z "$done" ] && errx 1 "nothing wiped on $dev"
 }
 
 function init () {

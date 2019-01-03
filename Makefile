@@ -1,6 +1,7 @@
 BASHS=		$(wildcard *.bash)
 SRC=		${BASHS}
 SYNTAX=		$(addsuffix .syntax, ${SRC})
+SYNTAX+=	easybackup.postinst.syntax
 
 PACKAGE=	easybackup-0.1
 DEB=		${PACKAGE}.deb
@@ -16,24 +17,33 @@ syntax: ${SYNTAX}
 %.bash.syntax: %.bash
 	bash -n $< && date > $@
 
-DEBROOT=debian
+%.postinst.syntax: %.postinst
+	bash -n $< && date > $@
+
+%.postrm.syntax: %.postrm
+	bash -n $< && date > $@
+
+DEBROOT=${PACKAGE}
 
 deb: ${DEB}
 
 ${DEB}:
-	${INSTALL_DIR} ${DEBROOT}/usr
+	${INSTALL_DIR} ${DEBROOT}/DEBIAN
+	${INSTALL_DATA} control ${DEBROOT}/DEBIAN/
 	${INSTALL_DIR} ${DEBROOT}/usr/bin
-	${INSTALL_DIR} ${DEBROOT}/usr/share
 	${INSTALL_DIR} ${DEBROOT}/usr/share/${PACKAGE}
+	${INSTALL_DIR} ${DEBROOT}/lib/systemd/system
 	${INSTALL_SCRIPT} easybackup.bash ${DEBROOT}/usr/bin/easybackup
 	${INSTALL_SCRIPT} easybackupd.bash ${DEBROOT}/usr/bin/easybackupd
 	git describe --abbrev=8 --dirty --always --tags > ${DEBROOT}/usr/share/${PACKAGE}/gitref
+	${INSTALL_DATA} easybackup.service ${DEBROOT}/lib/systemd/system
+	${INSTALL_SCRIPT} easybackup.postinst ${DEBROOT}/DEBIAN/postinst
+	${INSTALL_SCRIPT} easybackup.postrm ${DEBROOT}/DEBIAN/postrm
 	fakeroot dpkg-deb --build ${DEBROOT}
-	mv ${DEBROOT}.deb ${DEB}
 	echo "Built $@: `ls -l $@`"
 
 clean:
-	rm -rf ${DEBROOT}/[a-z]*
+	rm -rf ${DEBROOT}
 	rm -f ${DEB}
 	rm -f ${SYNTAX}
 

@@ -1,0 +1,24 @@
+#!/bin/bash
+
+service="easybackup"
+
+do_remove () {
+	deb-systemd-helper purge "$service" >/dev/null || true
+	update-rc.d "$service" remove >/dev/null || true
+}
+
+action="$1"
+case "$action" in
+	purge)
+		/bin/rm -rf /etc/easybackup
+		do_remove
+		;;
+	remove)
+		do_remove
+		;;
+	*)
+		;;
+esac
+
+exit 0
+

@@ -5,12 +5,16 @@
 EASYBACKUP=/usr/bin/easybackup
 
 oldstate=""
+gothup=""
+
+trap "gothup='yes'" SIGHUP
 
 while :; do
 	set -- $(mount | grep ^/ | md5sum)
 	currentstate="$1"
-	if [ "$oldstate" != "$currentstate" ]; then
+	if [ "$oldstate" != "$currentstate" -o -n "$gothup" ]; then
 		oldstate="$currentstate"
+		gothup=""
 		$EASYBACKUP auto
 	fi
 	sleep 60

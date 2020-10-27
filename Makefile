@@ -39,6 +39,8 @@ ${DEB}:
 	${INSTALL_DATA} easybackup.service ${DEBROOT}/lib/systemd/system
 	${INSTALL_SCRIPT} easybackup.postinst ${DEBROOT}/DEBIAN/postinst
 	${INSTALL_SCRIPT} easybackup.postrm ${DEBROOT}/DEBIAN/postrm
+	${INSTALL_DIR} ${DEBROOT}/etc/cron.weekly
+	${INSTALL_SCRIPT} easybackup.weekly.bash ${DEBROOT}/etc/cron.weekly/92-easybackup.weekly
 	fakeroot dpkg-deb --build ${DEBROOT}
 	echo "Built $@: `ls -l $@`"
 

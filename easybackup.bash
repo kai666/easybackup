@@ -183,12 +183,15 @@ SIGNATURE="$MD5SIGNATURE"
 # changeable
 LABEL="$LABEL"
 PATHS="$paths"
+GENERATIONS=7
 EOF
 }
 
 # pmf == PARTITION, MOUNTPOINT, FSTYPE
 function pmf () {
 	local dev="$1"
+
+	[ -z "$dev" ] && errx 1 "no dev defined"
 
 	dev=${dev%%/}		# cut trailing '/'
 	dev="`absolute "$dev"`"
@@ -273,7 +276,9 @@ function init () {
 	echo -e "$STAMP" | myinstall "$MOUNTPOINT/easybackup/$MD5SIGNATURE"
 }
 
-function backup () {
+# check device, read config
+# exports $MD5SIGNATURE and all variables defined in calculate_signature
+function _ckdev () {
 	local dev="$1"
 
 	pmf "$dev"
@@ -287,14 +292,52 @@ function backup () {
 	eval "$( sudo cat $CONFIGS/$MD5SIGNATURE )"
 	[ "$SIGNATURE" = "$MD5SIGNATURE" ] ||
 		errx 1 "signature $SIGNATURE doesn't match $MD5SIGNATURE"
-	
-	echo "backup to ID_FS_UUID=$ID_FS_UUID LABEL=$LABEL starting ..."
-	sudo touch $MOUNTPOINT/easybackup/easybackup_start
-	for p in $PATHS; do
-		echo "$p -> $MOUNTPOINT/easybackup/"
-		sudo rsync -au $p $MOUNTPOINT/easybackup/
+}
+
+# remove old backup directories
+function clean () {
+	local dev="$1"
+
+	_ckdev "$dev"
+	gen=${GENERATIONS:-0}
+	if [ "$gen" -eq 0 ]; then
+		echo "no GENERATIONS defined. nothing cleaned."
+		return
+	fi
+
+	echo "cleanup old backup directories (GENERATIONS=$gen) ..."
+	cd "$MOUNTPOINT/easybackup"
+	for d in `/bin/ls -1t`; do
+		test -d "$d" || continue
+		gen=$(( $gen - 1 ))
+		test $gen -ge 0 && continue
+		echo "cleanup_generations: remove $d"
 	done
-	sudo touch $MOUNTPOINT/easybackup/easybackup_stop
+	cd -
+}
+
+function backup () {
+	local dev="$1"
+
+	_ckdev "$dev"
+	echo "backup to ID_FS_UUID=$ID_FS_UUID LABEL=$LABEL starting ..."
+	gen=${GENERATIONS:-0}
+	if [ "$gen" -eq 0 ]; then
+		echo "using GENERATIONS=0. no versioning."
+		yyyymndd="00000000"
+	else
+		echo "using GENERATIONS=$gen"
+		yyyymmdd=`date +%Y%m%d`
+	fi
+	targetdir="$MOUNTPOINT/easybackup/$yyyymmdd"
+	sudo mkdir -p "$targetdir"
+	sudo touch $targetdir/easybackup_start
+	for p in $PATHS; do
+		echo "$p -> $targetdir"
+		sudo rsync -au $p $targetdir/
+	done
+	sudo touch $targetdir/easybackup_stop
+	clean "$dev"
 }
 
 function auto () {
@@ -314,7 +357,7 @@ case "$cmd" in
 	auto)
 		"$cmd"
 		;;
-	init|backup|stamp|signature|wipe)
+	init|backup|stamp|signature|wipe|clean)
 		"$cmd" "$@"
 		;;
 	*)

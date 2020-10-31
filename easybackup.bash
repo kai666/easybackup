@@ -35,10 +35,6 @@ function usage () {
 	echo -n "easybackup [command] [options]
 
 commands:
-	auto
-		Default action. Scan filesystems for easybackup
-		signatures and start backup accordingly
-
 	init <device|mountpoint> [<paths-to-backup> ... ]
 		Init a device/path as a target for easybackup.
 		List of paths is optional, /etc and /home are used
@@ -50,16 +46,23 @@ commands:
 		will trigger the start of a backup.
 		Backup to encrypted partitions is a good idea, anyhow.
 
-	backup <device|mountpoint>
+	backup [<device|mountpoint> ...]
 		Scan for new devices and check if backup should be started.
+
+	clean [<device|mountpoint> ...]
+		Remove old backup directories, if GENERATIONS=X key is
+		used in configuration.
+
+	list [<device|mountpoint> ...]
+		List names of mountpoints with active easybackup directories.
 
 	stamp <device|mountpoint> [<paths-to-backup> ...]
 		Print stamp for disk to STDOUT
 
-	signature <device|mountpoint>
+	signature [<device|mountpoint> ...]
 		Print signature for disk to STDOUT
 
-	wipe <device|mountpoint>
+	wipe [<device|mountpoint> ...]
 		Wipe 'easybackup' directory on disk an remove it from
 		configuration directory $CONFIGS
 
@@ -313,7 +316,7 @@ function clean () {
 		test $gen -ge 0 && continue
 		echo "cleanup_generations: remove $d"
 	done
-	cd -
+	cd - > /dev/null
 }
 
 function backup () {
@@ -340,25 +343,31 @@ function backup () {
 	clean "$dev"
 }
 
-function auto () {
+function auto_devices () {
 	mount | grep ^/ | while read dev on mp type fstype; do
-		if [ -d "$mp/easybackup" ]; then
-			(backup $dev)
-		fi
+		[ -d "$mp/easybackup" ] && echo $dev
 	done
+}
+
+function list () {
+	echo "$1"
 }
 
 ###
 ### MAIN
 ###
 
-cmd="${1:-auto}"; shift
+cmd="${1:-backup}"; shift
 case "$cmd" in
-	auto)
-		"$cmd"
-		;;
-	init|backup|stamp|signature|wipe|clean)
+	init|stamp)
 		"$cmd" "$@"
+		;;
+
+	backup|clean|list|signature|wipe)
+		devices="${@:-`auto_devices`}"
+		for d in "$devices"; do
+			"$cmd" "$d"
+		done
 		;;
 	*)
 		usage

@@ -15,7 +15,7 @@ while :; do
 	if [ "$oldstate" != "$currentstate" -o -n "$gothup" ]; then
 		oldstate="$currentstate"
 		gothup=""
-		$EASYBACKUP auto
+		$EASYBACKUP
 	fi
 	sleep 60
 done

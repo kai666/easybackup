@@ -1,3 +1,3 @@
 #!/bin/bash
 
-exec /usr/bin/easybackup auto
+exec /usr/bin/easybackup

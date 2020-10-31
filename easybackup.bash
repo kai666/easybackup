@@ -128,7 +128,7 @@ function hwpartition () {
 
 	while :; do
 	case "$_part" in
-		sd*|hd*)
+		sd*|hd*|nvme*)
 			break
 			;;
 		dm-*)
